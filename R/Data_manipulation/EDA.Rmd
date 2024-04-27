@@ -1,0 +1,333 @@
+---
+title: "EDA_Analysis"
+author: "charith"
+date: "2024-04-23"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+sales <- read_csv("~/Documents/job__projects/python_data-analysis/Diwali Sales Data.csv")
+sales_clean <- gsub("[^\\x00-\\x7F]", "", sales)
+head(sales)
+```
+```{r}
+dim(sales)
+```
+
+```{r}
+str(sales)
+```
+```{r}
+#Checking missing values for each column
+
+unique(is.na(sales$User_ID))
+missing_values <- sapply(sales, function(x) unique(is.na(x)))
+print(missing_values)
+```
+
+```{r}
+# Remove columns from the 'sales' data frame
+sales <- sales %>%
+  select(-Status, -unnamed1)
+
+# Check for missing values in the modified data frame
+missing_values <- sapply(sales, function(x) unique(is.na(x)))
+print(missing_values)
+
+```
+
+```{r}
+colSums(is.na(sales))
+
+# Replace missing values in the 'Amount' column with the mean of non-missing values
+sales <- sales %>%
+  mutate(Amount = ifelse(is.na(Amount), mean(Amount, na.rm = TRUE), Amount))
+
+# Check for missing values in each column
+colSums(is.na(sales))
+```
+
+```{r}
+head(sales)
+```
+
+```{r}
+library(dplyr)
+sales_data <- sales %>% 
+  mutate(Marital_Status = as.factor(Marital_Status)) %>% 
+  mutate(Occupation = as.factor(Occupation)) %>% 
+  mutate(Amount = as.integer(Amount))
+```
+
+
+```{r}
+str(sales_data)
+```
+
+```{r}
+sales_data$Gender <- factor(sales_data$Gender)
+```
+
+```{r}
+sales_data_1 <- sales_data %>% 
+  mutate(Gender = recode(Gender, 
+                         F = "Female",
+                         M = "Male")) %>% 
+  mutate(Marital_Status = recode(Marital_Status,
+                                 "0" = "Unmarried",
+                                 "1" = "Married")) %>% 
+  head(5)
+print(sales_data_1)
+```
+
+
+```{r}
+gender_distri <- sales_data_1 %>% 
+  count(Gender) 
+print(gender_distri)
+
+```
+
+```{r}
+ggplot(gender_distri, aes(x = Gender, y = n)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Gender Distribution in Sales",
+       x = "Gender",
+       y = "Count")
+
+```
+
+```{r}
+gender_distri_amount = sales_data_1%>% 
+  select(Gender, Amount) %>% 
+  group_by(Gender) %>% 
+  summarise(Total_Amount = sum(Amount)) %>%
+  arrange(desc(Total_Amount))
+
+print(gender_distri_amount)
+```
+
+
+```{r}
+ggplot(gender_distri_amount, aes(x = Gender, y = Total_Amount)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Gender Distribution of Total Amounts",
+       x = "Gender",
+       y = "Total Amount")
+```
+
+```{r}
+age_df <- sales_data_1 %>%
+  group_by(Age) %>%
+  summarise(Orders = sum(Orders),
+            Amount = sum(Amount)) %>%
+  arrange(desc(Amount)) %>% 
+  head(5)
+
+print(age_df)
+```
+
+
+```{r}
+ggplot(age_df, aes(x= Age, y = Amount))+
+  geom_bar(stat = "identity")+
+  labs(title = "Age Distribution of Orders",
+       x = "Age",
+       y = "Amount")
+```
+
+```{r}
+statewise_orders <- sales_data_1 %>% 
+  select(State, Orders) %>% 
+  group_by(State) %>% 
+  summarise(state_orders = sum(Orders)) %>% 
+  arrange(desc(state_orders)) %>% 
+  head()
+
+print(statewise_orders)
+```
+
+```{r}
+# Check for any special characters in State names and remove them if necessary
+statewise_orders$State <- gsub("[^[:alnum:][:space:]]", "", statewise_orders$State)
+
+# Reorder State factor levels based on the number of orders
+statewise_orders <- statewise_orders %>%
+  mutate(State = factor(State, levels = State[order(state_orders, decreasing = TRUE)]))
+
+ggplot(statewise_orders, aes(x = State, y = state_orders)) +
+  geom_bar(stat = "identity") +
+  labs(title = "State_wise Orders Distribution",
+       x = "States",
+       y = "Number of Orders")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels if needed
+
+```
+
+
+```{r}
+statewise_amount <- sales_data_1 %>% 
+  select(State, Amount) %>% 
+  group_by(State) %>% 
+  summarise(state_amount = sum(Amount)) %>% 
+  arrange(desc(state_amount)) %>% 
+  head(5)
+
+print(statewise_amount)
+```
+
+```{r}
+# Check for any special characters in State names and remove them if necessary
+statewise_amount$State <- gsub("[^[:alnum:][:space:]]", "", statewise_amount$State)
+
+# Reorder State factor levels based on the number of orders
+statewise_amount <- statewise_amount %>%
+  mutate(State = factor(State, levels = State[order(state_amount, decreasing = TRUE)]))
+
+ggplot(statewise_amount, aes(x = State, y = state_amount)) +
+  geom_bar(stat = "identity") +
+  labs(title = "State_wise Orders Distribution",
+       x = "States",
+       y = "Total amount spent by top 5 States")+
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels if needed
+
+```
+
+```{r}
+age_df <- sales_data_1 %>%
+  group_by(Age) %>%
+  summarise(Orders = max(Orders),
+            Amount = max(Amount)) %>%
+  arrange(desc(Amount))
+
+print(age_df)
+```
+
+```{r}
+ggplot(age_df, aes(x= Age, y = Amount))+
+  geom_bar(stat = "identity")+
+  labs(title = "Age Distribution of Orders",
+       x = "Age",
+       y = "Amount")
+```
+
+```{r}
+statewise_orders <- sales_data_1 %>% 
+  select(State, Orders) %>% 
+  group_by(State) %>% 
+  summarise(state_orders = sum(Orders)) %>% 
+  arrange(desc(state_orders)) %>% 
+  head()
+
+print(statewise_orders)
+```
+
+```{r}
+# Check for any special characters in State names and remove them if necessary
+statewise_orders$State <- gsub("[^[:alnum:][:space:]]", "", statewise_orders$State)
+
+# Reorder State factor levels based on the number of orders
+statewise_orders <- statewise_orders %>%
+  mutate(State = factor(State, levels = State[order(state_orders, decreasing = TRUE)]))
+
+
+ggplot(statewise_orders, aes(x = State, y = state_orders)) +
+  geom_bar(stat = "identity") +
+  labs(title = "State_wise Orders Distribution",
+       x = "States",
+       y = "Number of Orders")
+```
+
+```{r}
+sales_data_1 %>% 
+  select(Marital_Status) %>% 
+  group_by(Marital_Status) %>% 
+  count()
+```
+```{r}
+sales_data_1 %>%
+  select(Marital_Status, Gender) %>% 
+  group_by(Gender, Marital_Status) %>%
+  filter(Gender %in% c("Male", "Female")) %>% 
+  count()
+```
+
+```{r}
+marital_sales <- sales_data_1 %>%
+  select(Marital_Status, Gender, Amount) %>% 
+  group_by(Gender, Marital_Status) %>%
+  summarise(total_amount = sum(Amount)) %>%
+  arrange(desc(total_amount))
+
+print(marital_sales)
+```
+
+```{r}
+# Plot the data
+ggplot(marital_sales, aes(x = Marital_Status, y = total_amount, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Amount by Marital Status and Gender",
+       x = "Marital Status",
+       y = "Total Amount",
+       fill = "Gender") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 1, hjust = 1))
+```
+
+```{r}
+sales_data %>%
+  select(Occupation) %>%
+  group_by(Occupation) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+
+
+```{r}
+sales_data %>% 
+  select(Occupation, Amount) %>% 
+  group_by(Occupation) %>% 
+  summarise(total_amount = sum(Amount)) %>% 
+  arrange(desc(total_amount)) %>% 
+  head(5)
+```
+
+
+```{r}
+sales_data %>% 
+  select(Product_Category) %>% 
+  group_by(Product_Category) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+```
+
+```{r}
+sales_data %>% 
+  select(Product_Category, Amount) %>% 
+  group_by(Product_Category) %>% 
+  summarise(total_amount = sum(Amount)) %>% 
+  arrange(desc(total_amount)) %>% 
+  head(5)
+```
+
+```{r}
+sales_data %>% 
+  select(Product_ID) %>% 
+  group_by(Product_ID) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+```
+
+```{r}
+sales_data %>% 
+  select(Product_ID, Amount) %>% 
+  group_by(Product_ID) %>% 
+  summarise(total_amount = sum(Amount)) %>% 
+  arrange(desc(total_amount)) %>% 
+  head(5)
+```
